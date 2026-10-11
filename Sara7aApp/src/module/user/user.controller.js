@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getUserById, searchUser } from './user.service.js';
-import { auth } from "../../common/services/token.srevice.js";
+import { auth } from "../../common/services/token.service.js";
 
 
 const router = Router();
