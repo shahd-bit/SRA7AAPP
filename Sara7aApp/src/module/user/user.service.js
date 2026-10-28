@@ -22,3 +22,21 @@ export const searchUser = async (quary) => {
   }
   return user;
 };
+
+export const getAllUsers = async () => {
+  const users = await userModel.find();
+  if (users.length === 0) {
+    throw BadRequestException({ message: "No users found" });
+  }
+  return users;
+};
+
+export const uploadProfileImage = async (id, image) => {
+  let user = await userModel.findById(id);
+  if (!user || !image) {
+    throw BadRequestException({ message: "user not found" });
+  }
+  user.profileImg = `uploads/${image.filename}`;
+  await user.save();
+  return user;
+};

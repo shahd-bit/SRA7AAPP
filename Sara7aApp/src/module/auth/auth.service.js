@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ErrorResponse,
+  UnauthorizedException,
 } from "../../common/errors/appError.js";
 import { compareHash, generateHash } from "../../common/index.js";
 import { userModel } from "./../../database/model/user.model.js";
@@ -9,6 +10,8 @@ import {
   generateAccessToken,
   generateToken,
 } from "../../common/services/token.service.js";
+import { sendEmail } from "../../common/services/sendEmail.js";
+import { get, set, del } from "../../database/redis/redis.service.js";
 export const signUp = async (body) => {
   let { name, email, password, rePassword, age, gender, phone } = body;
   if (password != rePassword) {
@@ -18,6 +21,7 @@ export const signUp = async (body) => {
   if (exsistedEmail) {
     throw ConflictException({ message: "Email already exists" });
   } else {
+    let otp = String(Math.floor(100000 + Math.random() * 900000));
     const hashedPassword = await generateHash({ planText: password });
     if (hashedPassword) {
       let user = await userModel.create({
@@ -27,6 +31,12 @@ export const signUp = async (body) => {
         age,
         gender,
         phone,
+      });
+      await set(`otp::${user._id}`, otp, 5 * 60);
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email",
+        html: `<h1>Your OTP is: ${otp}</h1>`,
       });
       return user;
     } else {
@@ -39,6 +49,9 @@ export const signIn = async (body) => {
   let { email, password } = body;
   let user = await userModel.findOne({ email });
   if (user) {
+    if (!user.isVerified) {
+      throw UnauthorizedException({ message: "Email not verified" });
+    }
     let isValidPassword = await compareHash({
       planText: password,
       hashedPassword: user.password,
@@ -68,4 +81,23 @@ export const refreshToken = (body) => {
   } else {
     throw BadRequestException({ message: "Invalid refresh token" });
   }
+};
+
+export const verifyEmail = async (body) => {
+  let { otp, email } = body;
+  const user = await userModel.findOne({ email });
+  if (!user) {
+    throw BadRequestException({ message: "user not found" });
+  }
+  if (user.isVerified) {
+    throw BadRequestException({ message: "Email already verified" });
+  }
+  let redisOTP = await get(`otp::${user._id}`);
+  if (!redisOTP || redisOTP !== String(otp)) {
+    throw BadRequestException({ message: "Invalid OTP" });
+  }
+  user.isVerified = true;
+  await user.save();
+  await del(`otp::${user._id}`);
+  return { message: "Email verified successfully" };
 };

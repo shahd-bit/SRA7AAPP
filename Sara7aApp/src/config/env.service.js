@@ -12,6 +12,9 @@ const userRefreshTokenKey = process.env.USER_REFRESH_TOKEN_KEY;
 const adminRefreshTokenKey = process.env.ADMIN_REFRESH_TOKEN_KEY;
 const userAud = process.env.USER_AUD;
 const adminAud = process.env.ADMIN_AUD;
+const emailService = process.env.EMAIL_SERVICE;
+const emailPassword = process.env.EMAIL_PASSWORD;
+const redisUrl = process.env.REDIS_URL;
 
 const mood = process.env.MOOD;
 
@@ -26,4 +29,7 @@ export let env = {
   userAud,
   adminAud,
   mood,
+  emailService,
+  emailPassword,
+  redisUrl,
 };
